@@ -1,8 +1,12 @@
-#  Makefile for P1: File Sys Project;  CEG 4350/6350, Matt Piekenbrock
+#  Makefile for IWB Project;  Senior Design, Matt Piekenbrock
 
 CFLAGS = -g -Wall -pedantic -std=c++11 -I/usr/local/include -L/usr/local/lib
 CC = g++
 
+# TODO: add manual linking option not dependent on pkg-config
+
+OPENCV_LIBS_pc = `pkg-config --libs opencv`
+OPENCV_LIBS_man = -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
 .SUFFIXES: .cpp .o .C
 
 .C.o:
@@ -19,22 +23,18 @@ OBJFILES = main.o
 PROJECT = track
 
 $(PROJECT): $(OBJFILES)
-	g++ -o $(PROJECT) $(CFLAGS) $(OBJFILES)
-
-test:   $(PROJECT)	
-	rm -fr D?.bin
-	./$(PROJECT)
+	g++ -o $(PROJECT) $(CFLAGS) $(OBJFILES) $(OPENCV_LIBS_man)
 
 $(OBJFILES):  Makefile
 
 indent:
-	indent -kr -i2 -pmt *.C *.h
+	indent -i2 -pmt *.C *.h
 
 tar archive: clean
 	(cd ..; tar cvvfj ./$(PROJECT).tbz $(PROJECT); ls -l $(PROJECT).tbz)
 
 clean:
-	rm -fr *.o *~ *.out $(PROJECT) D?.dsk *.f33 d1.txt
+	rm -fr *.o *~ *.out $(PROJECT)
 
 
 # -eof-

@@ -6,7 +6,6 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
-//#include <opencv2/nonfree/features2d.hpp>
 
 using namespace std;
 using namespace cv;
@@ -17,17 +16,18 @@ void calibratePiCamera()
 	int nTotalSquares = numCornersHor * numCornersVer;
 	cv::Size board_sz = cv::Size(numCornersHor, numCornersVer);
 	VideoCapture capture = VideoCapture(0);
-	vector<vector<Point3f>> object_points; // <-- Should be Chessboard corners
-	vector<vector<Point2f>> image_points; // <-- image_points is the location of the corners
-	vector<Point2f> corners;
+	vector <vector <Point3f> > object_points; // <-- Should be Chessboard corners
+	vector <vector <Point2f> > image_points; // <-- image_points is the location of the corners
+	vector <Point2f> corners;
 	int successes = 0;
 	Mat image, gray_image;
 	cv::Size size(800, 600);
 	// Input image from video
 	capture >> image;
 
+	// /usr/local/bin/clion-140.2310.6/bin:
 	// List of vertices
-	vector<Point3f> obj;
+	vector <Point3f> obj;
 	for (int j = 0; j < nTotalSquares; j++)
 	{obj.push_back(Point3f(j / numCornersHor, j % numCornersHor, 0.0f));}
 
@@ -65,10 +65,10 @@ void calibratePiCamera()
 	}
 	Mat intrinsic = Mat(3, 3, CV_32FC1); // intrinsic parameters of camera!
 	Mat distCoeffs;
-	vector<Mat> rvecs;
-	vector<Mat> tvecs;
-	intrinsic.ptr<float>(0)[0] = 1; // focal length along X for Pi camera
-	intrinsic.ptr<float>(1)[1] = 1; // focal length along X for Pi camera
+	vector <Mat> rvecs;
+	vector <Mat> tvecs;
+	intrinsic.ptr <float>(0)[0] = 1; // focal length along X for Pi camera
+	intrinsic.ptr <float>(1)[1] = 1; // focal length along X for Pi camera
 	calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
 	Mat imageUndistorted;
 	while (1)
@@ -86,7 +86,7 @@ void calibratePiCamera()
 	capture.release();
 } // void calibrateCamera()
 
-cv::KeyPoint filter_keypoints(vector<cv::KeyPoint> &my_key_list)
+cv::KeyPoint filter_keypoints(vector <cv::KeyPoint> &my_key_list)
 {
 	double min_size = 0;
 	int index = 0;
@@ -121,9 +121,9 @@ void detectBlob(cv::Mat &image)
 	params.minInertiaRatio = 0.005; // min/max = circularity, where 0 == line, 1 == circle
 	params.maxInertiaRatio = 1;
 	params.filterByConvexity = false;
-	Ptr<FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
+	Ptr <FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
 	blob_detector->create("SimpleBlob");
-	vector<KeyPoint> blob_keypoints, new_keypoints;
+	vector <KeyPoint> blob_keypoints, new_keypoints;
 	blob_detector->detect(image, blob_keypoints);
 	double* blob_area = 0;
 	for (auto &elem: blob_keypoints)
@@ -142,7 +142,7 @@ void detectBlob(cv::Mat &image)
 	return;
 }
 
-vector<cv::KeyPoint> detectBlobs(std::vector<cv::Mat*> images, int output)
+vector <cv::KeyPoint> detectBlobs(std::vector <cv::Mat*> images, int output)
 {
 	cv::SimpleBlobDetector::Params params;
 	// Thresholding and blob merging params
@@ -170,10 +170,10 @@ vector<cv::KeyPoint> detectBlobs(std::vector<cv::Mat*> images, int output)
 	params.maxCircularity = 1.0;
 	params.maxInertiaRatio = 1.0;
 
-	cv::Ptr<cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
+	cv::Ptr <cv::FeatureDetector> blob_detector = new cv::SimpleBlobDetector(params);
 	blob_detector->create("SimpleBlob");
-	vector<cv::KeyPoint> keypoints_image1, keypoints_image2, keypoints_image3, keypoints_image4, keypoints_r_img5;
-	vector<cv::KeyPoint> keypoints_r_img6, keypoints_image7, keypoints_image8, blob_keypoints;
+	vector <cv::KeyPoint> keypoints_image1, keypoints_image2, keypoints_image3, keypoints_image4, keypoints_r_img5;
+	vector <cv::KeyPoint> keypoints_r_img6, keypoints_image7, keypoints_image8, blob_keypoints;
 	blob_detector->detect(*images.at(0), keypoints_image1);
 	blob_detector->detect(*images.at(1), keypoints_image2);
 	blob_detector->detect(*images.at(2), keypoints_image3);
@@ -257,9 +257,9 @@ vector<cv::KeyPoint> detectBlobs(std::vector<cv::Mat*> images, int output)
 	return blob_keypoints;
 }
 
-std::vector<cv::Point2f> scanThresholdedImage(cv::Mat &image)
+std::vector <cv::Point2f> scanThresholdedImage(cv::Mat &image)
 {
-	std::vector<cv::Point2f> detected_object;
+	std::vector <cv::Point2f> detected_object;
 	int count = 0;
 	for (int row = 0; row < image.rows; ++row)
 	{
@@ -308,26 +308,26 @@ int main()
 
 	cv::Size size(800, 600);
 	//calibratePiCamera();
-	std::vector<cv::Mat*> camera_vector_angle_R, camera_vector_angle_L;
+	std::vector <cv::Mat*> camera_vector_angle_R, camera_vector_angle_L;
 	cv::Mat r_imgs[9], l_imgs[9];
 	cv::Mat l_img1, l_img2, l_img3, l_img4, l_img5, l_img6, l_img7, l_img8, imageL_output;
 
-	std::string img_dir ="";
+	std::string img_dir = "";
 	std::string folder_base = "images1";
 	cv::Mat img;
 	// Right
 	for (int i = 1; i <= 8; ++i)
 	{
-		img_dir = folder_base+"/r_img"+std::to_string(i)+".jpg";
-		r_imgs[i]  = cv::imread(img_dir, 1);
-		cv::threshold(r_imgs[i] , r_imgs[i] , 60, 255, 3);
+		img_dir = folder_base + "/r_img" + std::to_string(i) + ".jpg";
+		r_imgs[i] = cv::imread(img_dir, 1);
+		cv::threshold(r_imgs[i], r_imgs[i], 60, 255, 3);
 		cv::cvtColor(r_imgs[i], r_imgs[i], CV_RGB2GRAY);
 		camera_vector_angle_R.push_back(&r_imgs[i]);
 	}
 	// Left
 	for (int i = 1; i <= 8; ++i)
 	{
-		img_dir = folder_base+"/l_img"+std::to_string(i)+".jpg";
+		img_dir = folder_base + "/l_img" + std::to_string(i) + ".jpg";
 		l_imgs[i] = cv::imread(img_dir, 1);
 		cv::threshold(l_imgs[i], l_imgs[i], 60, 255, 3);
 		cv::cvtColor(l_imgs[i], l_imgs[i], CV_RGB2GRAY);
@@ -335,7 +335,7 @@ int main()
 	}
 
 	//std::vector<cv::Point2f> object_points_image1, object_points_image2;
-	std::vector<cv::KeyPoint> detected_objs_R, detected_obj_L;
+	std::vector <cv::KeyPoint> detected_objs_R, detected_obj_L;
 	std::cout << "got here" << std::endl;
 	std::cout.flush();
 
@@ -349,7 +349,7 @@ int main()
 	{cout << blob_keypoint.pt;}
 //
 	// Convert KeyPoints to points vector
-	std::vector<cv::Point2f> pointsR, pointsL;
+	std::vector <cv::Point2f> pointsR, pointsL;
 	cv::KeyPoint::convert(detected_objs_R, pointsR);
 	cv::KeyPoint::convert(detected_obj_L, pointsL);
 
@@ -362,12 +362,12 @@ int main()
 	{
 		for (int j = 0; j < 3; j++)
 		{
-			cout << fundamental_matrix.at<float>(i, j) << endl;
+			cout << fundamental_matrix.at <float>(i, j) << endl;
 		}
 	}
 
-	cout << "\nPrincipal Point: (" << fundamental_matrix.at<float>(1, 3) << "," << fundamental_matrix.at<float>(2,
-	                                                                                                            3) << ")\n";
+	cout << "\nPrincipal Point: (" << fundamental_matrix.at <float>(1, 3) << "," << fundamental_matrix.at <float>(2,
+	                                                                                                              3) << ")\n";
 	//outputimage3 = cv::imread("objective_plane.jpg", 1);
 	//transpose(outputimage3, outputimage3);
 	//out_img = rotateImage(out_img, 90);
@@ -399,13 +399,13 @@ int main()
 //	double x_interceptR = (-(*abcR)[2])/(*abcR)[0];
 //	double y_interceptR = (-(*abcR)[2])/(*abcR)[1];
 
-	std::vector<cv::Vec3f> epilines_as_viewed_from_right_cam, epilines_as_viewed_from_left_cam;
+	std::vector <cv::Vec3f> epilines_as_viewed_from_right_cam, epilines_as_viewed_from_left_cam;
 
 	cv::computeCorrespondEpilines(cv::Mat(pointsL), 1, fundamental_matrix, epilines_as_viewed_from_right_cam);
 	cv::computeCorrespondEpilines(cv::Mat(pointsR), 2, fundamental_matrix, epilines_as_viewed_from_left_cam);
 
-	std::vector<cv::Vec3f>::const_iterator abcR = epilines_as_viewed_from_right_cam.begin();
-	std::vector<cv::Vec3f>::const_iterator abcL = epilines_as_viewed_from_left_cam.begin();
+	std::vector <cv::Vec3f>::const_iterator abcR = epilines_as_viewed_from_right_cam.begin();
+	std::vector <cv::Vec3f>::const_iterator abcL = epilines_as_viewed_from_left_cam.begin();
 
 	double x_interceptR = -(*abcR)[2] / (*abcR)[1];
 	double y_interceptR = -(*abcR)[2] / (*abcR)[1];
@@ -416,8 +416,8 @@ int main()
 	// draw the epipolar li
 	// ne between first and last column
 	int i = 0;
-	std::vector<cv::Point2d> left_epilines;
-	std::vector<cv::Point2d> right_epilines;
+	std::vector <cv::Point2d> left_epilines;
+	std::vector <cv::Point2d> right_epilines;
 
 	while (abcL != epilines_as_viewed_from_left_cam.end())
 	{
@@ -432,10 +432,12 @@ int main()
 		/* -c = ax + by */
 		/* x = (-by - c)/a */
 		/* y = -(c + ax)/b */
+		/* -((*abcL)[2] + (*abcL)[0] * out_imgL.cols) / (*abcL)[1])*/
+		/* -(c+ax/b)*/
 		cv::line(out_imgL, cv::Point2d(0, -(*abcL)[2] / (*abcL)[1]),
 		         cv::Point2d(out_imgL.cols, -((*abcL)[2] + (*abcL)[0] * out_imgL.cols) / (*abcL)[1]), CV_RGB(0, 255, 0), 2,
 		         CV_AA, 0);
-		//cv::line(out_imgL, cv::Point2d(0, y_interceptL), cv::Point2d(x_interceptL, 0), CV_RGB(0, 255, 0), 2, CV_AA, 0);
+		//cv::line(out_imgL, cv::Point2d(0, y_interceptL), cv::Point2d(out_imgL.cols, x_interceptL), CV_RGB(0, 255, 0), 2, CV_AA, 0);
 		abcL++;
 		i++;
 		cv::namedWindow("Epiline L", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
@@ -450,8 +452,8 @@ int main()
 		right_epilines.push_back(cv::Point2d(0, -(*abcR)[2] / (*abcR)[1]));
 		right_epilines.push_back(cv::Point2d(out_imgR.cols, -((*abcR)[2] + (*abcR)[0] * out_imgR.cols) / (*abcR)[1]));
 		cv::line(out_imgR, cv::Point2d(0, -(*abcR)[2] / (*abcR)[1]),
-		         cv::Point2d(out_imgR.cols, -((*abcR)[2] + (*abcR)[0] * out_imgR.cols) / (*abcR)[1]), CV_RGB(0, 255, 0), 2, CV_AA,
-		         0);
+		         cv::Point2d(out_imgR.cols, -((*abcR)[2] + (*abcR)[0] * out_imgR.cols) / (*abcR)[1]), CV_RGB(0, 255, 0), 2,
+		         CV_AA, 0);
 //		x_interceptR = -(*abcR)[2] / (*abcR)[1];
 //		y_interceptR = -(*abcR)[2] / (*abcR)[1];
 //		cv::line(out_imgR, cv::Point2d(0, y_interceptR), cv::Point2d(x_interceptR, 0), CV_RGB(0, 255, 0), 2, CV_AA, 0);

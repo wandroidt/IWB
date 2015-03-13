@@ -3,8 +3,6 @@
 CFLAGS = -g -Wall -pedantic -std=c++11 -I/usr/local/include -L/usr/local/lib
 CC = g++
 
-# TODO: add manual linking option not dependent on pkg-config
-
 OPENCV_LIBS_pc = `pkg-config --libs opencv`
 OPENCV_LIBS_man = -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
 .SUFFIXES: .cpp .o .C

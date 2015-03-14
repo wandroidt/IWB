@@ -12,12 +12,13 @@ using namespace cv;
 
 void calibratePiCamera()
 {
-	int numBoards = 8, numCornersHor = 9, numCornersVer = 6;
+	int numBoards = 7, numCornersHor = 8, numCornersVer = 6;
 	int nTotalSquares = numCornersHor * numCornersVer;
 	cv::Size board_sz = cv::Size(numCornersHor, numCornersVer);
+	cv::FileStorage distCoeffs_file("distCoeffs.txt", cv::FileStorage::WRITE);
 	VideoCapture capture = VideoCapture(0);
-	vector <vector <Point3f> > object_points; // <-- Should be Chessboard corners
-	vector <vector <Point2f> > image_points; // <-- image_points is the location of the corners
+	vector <vector <Point3f> > object_points; // Should be Chessboard corners
+	vector <vector <Point2f> > image_points;
 	vector <Point2f> corners;
 	int successes = 0;
 	Mat image, gray_image;
@@ -38,16 +39,15 @@ void calibratePiCamera()
 		                                   CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
 
 		// Corners contains pixel coord's of corners that matched the pattern
-		// TODO: improve accuracy with cornersSubPix function and tweaking of epsilon
 		if (found)
 		{
-			//cornerSubPix(gray_image, corners, Size(11, 11), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 30, 0.1));
+			cornerSubPix(gray_image, corners, Size(11, 11), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 30, 0.1));
 			drawChessboardCorners(gray_image, board_sz, corners, found);
 		}
 
 		cv::resize(image, image, size);
 		cv::resize(gray_image, gray_image, size);
-		imshow("Original", image);
+		//imshow("Original", image);
 		imshow("Gray", gray_image);
 		capture >> image;
 		int key = waitKey(1);
@@ -70,19 +70,22 @@ void calibratePiCamera()
 	intrinsic.ptr <float>(0)[0] = 1; // focal length along X for Pi camera
 	intrinsic.ptr <float>(1)[1] = 1; // focal length along X for Pi camera
 	calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
-	Mat imageUndistorted;
-	while (1)
-	{
-		capture >> image;
-		undistort(image, imageUndistorted, intrinsic, distCoeffs);
-		cv::resize(image, image, size);
-		cv::resize(imageUndistorted, imageUndistorted, size);
-		imshow("Supposedly distorted image", image);
-		imshow("supposedly undistorted image", imageUndistorted);
-		int key = waitKey(1);
-		if (key == 27) // Esc key
-			break;
-	}
+	file << distCoeffs_file;
+
+
+	// Mat imageUndistorted;
+	// while (1)
+	// {
+	// 	capture >> image;
+	// 	undistort(image, imageUndistorted, intrinsic, distCoeffs);
+	// 	cv::resize(image, image, size);
+	// 	cv::resize(imageUndistorted, imageUndistorted, size);
+	// 	imshow("Supposedly distorted image", image);
+	// 	imshow("supposedly undistorted image", imageUndistorted);
+	// 	int key = waitKey(1);
+	// 	if (key == 27) // Esc key
+	// 		break;
+	// }
 	capture.release();
 } // void calibrateCamera()
 

@@ -6,89 +6,13 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/legacy/legacy.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/nonfree/features2d.hpp>
+//#include "calibrateCamera.h"
 
 using namespace std;
 using namespace cv;
 
-void calibratePiCamera()
-{
-	int numBoards = 7, numCornersHor = 8, numCornersVer = 6;
-	int nTotalSquares = numCornersHor * numCornersVer;
-	cv::Size board_sz = cv::Size(numCornersHor, numCornersVer);
-	cv::FileStorage distCoeffs_file("distCoeffs.txt", cv::FileStorage::WRITE);
-	VideoCapture capture = VideoCapture(0);
-	vector <vector <Point3f> > object_points; // Should be Chessboard corners
-	vector <vector <Point2f> > image_points;
-	vector <Point2f> corners;
-	int successes = 0;
-	Mat image, gray_image;
-	cv::Size size(800, 600);
-	// Input image from video
-	capture >> image;
-
-	// /usr/local/bin/clion-140.2310.6/bin:
-	// List of vertices
-	vector <Point3f> obj;
-	for (int j = 0; j < nTotalSquares; j++)
-	{obj.push_back(Point3f(j / numCornersHor, j % numCornersHor, 0.0f));}
-
-	while (successes < numBoards)
-	{
-		cvtColor(image, gray_image, CV_BGR2GRAY);
-		bool found = findChessboardCorners(image, board_sz, corners,
-		                                   CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
-
-		// Corners contains pixel coord's of corners that matched the pattern
-		if (found)
-		{
-			cornerSubPix(gray_image, corners, Size(11, 11), Size(-1, -1), TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 30, 0.1));
-			drawChessboardCorners(gray_image, board_sz, corners, found);
-		}
-
-		cv::resize(image, image, size);
-		cv::resize(gray_image, gray_image, size);
-		//imshow("Original", image);
-		imshow("Gray", gray_image);
-		capture >> image;
-		int key = waitKey(1);
-		if (key == 27) // Esc key
-			return;
-		if (key == ' ' && found != 0) // Space-bar stores results and keeps going for pre-set numBoards
-		{
-			image_points.push_back(corners);
-			object_points.push_back(obj);
-			printf("Snap stored!");
-			++successes;
-			if (successes >= numBoards)
-				break;
-		}
-	}
-	Mat intrinsic = Mat(3, 3, CV_32FC1); // intrinsic parameters of camera!
-	Mat distCoeffs;
-	vector <Mat> rvecs;
-	vector <Mat> tvecs;
-	intrinsic.ptr <float>(0)[0] = 1; // focal length along X for Pi camera
-	intrinsic.ptr <float>(1)[1] = 1; // focal length along X for Pi camera
-	calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
-	file << distCoeffs_file;
-
-
-	// Mat imageUndistorted;
-	// while (1)
-	// {
-	// 	capture >> image;
-	// 	undistort(image, imageUndistorted, intrinsic, distCoeffs);
-	// 	cv::resize(image, image, size);
-	// 	cv::resize(imageUndistorted, imageUndistorted, size);
-	// 	imshow("Supposedly distorted image", image);
-	// 	imshow("supposedly undistorted image", imageUndistorted);
-	// 	int key = waitKey(1);
-	// 	if (key == 27) // Esc key
-	// 		break;
-	// }
-	capture.release();
-} // void calibrateCamera()
-
+typedef unsigned int uint;
 cv::KeyPoint filter_keypoints(vector <cv::KeyPoint> &my_key_list)
 {
 	double min_size = 0;
@@ -308,32 +232,28 @@ Mat rotateImage(const Mat &source, double angle)
 /* Left and Right determined from a top-down view */
 int main()
 {
-
 	cv::Size size(800, 600);
 	//calibratePiCamera();
 	std::vector <cv::Mat*> camera_vector_angle_R, camera_vector_angle_L;
 	cv::Mat r_imgs[9], l_imgs[9];
 	cv::Mat l_img1, l_img2, l_img3, l_img4, l_img5, l_img6, l_img7, l_img8, imageL_output;
 
-	std::string img_dir = "";
+	char* img_dir = new char[1024];
 	std::string folder_base = "images1";
 	cv::Mat img;
-	// Right
-	for (int i = 1; i <= 8; ++i)
+	// Input
+	for (uint i = 0; i < 8; ++i)
 	{
-		img_dir = folder_base + "/r_img" + std::to_string(i) + ".jpg";
+		sprintf(img_dir, "%s/r_img%u.jpg", (char*) folder_base.c_str(), i);
 		r_imgs[i] = cv::imread(img_dir, 1);
-		cv::threshold(r_imgs[i], r_imgs[i], 60, 255, 3);
-		cv::cvtColor(r_imgs[i], r_imgs[i], CV_RGB2GRAY);
-		camera_vector_angle_R.push_back(&r_imgs[i]);
-	}
-	// Left
-	for (int i = 1; i <= 8; ++i)
-	{
-		img_dir = folder_base + "/l_img" + std::to_string(i) + ".jpg";
+		sprintf(img_dir, "%s/l_img%u.jpg", (char*) folder_base.c_str(), i);
 		l_imgs[i] = cv::imread(img_dir, 1);
+
+		cv::threshold(r_imgs[i], r_imgs[i], 60, 255, 3);
 		cv::threshold(l_imgs[i], l_imgs[i], 60, 255, 3);
+		cv::cvtColor(r_imgs[i], r_imgs[i], CV_RGB2GRAY);
 		cv::cvtColor(l_imgs[i], l_imgs[i], CV_RGB2GRAY);
+		camera_vector_angle_R.push_back(&r_imgs[i]);
 		camera_vector_angle_L.push_back(&l_imgs[i]);
 	}
 
@@ -511,14 +431,7 @@ int main()
 	//stereoRectifyUncalibrated(pointsR, pointsL,  fundamental_matrix,  image_size,  H1,  H2,  5);
 
 
-//	cv::Mat rectified1(l_img1.size(), l_img1.type());
-//	cv::warpPerspective(l_img1, rectified1, H1, l_img1.size());
-//	cv::imwrite("rectified1.png", rectified1);
-//
-//	cv::Mat rectified2(r_img1.size(), r_img1.type());
-//	cv::warpPerspective(r_img1, rectified2, H2, r_img1.size());
-//	cv::imwrite("rectified2.png", rectified2);
-//
+
 //	out_imgLR = l_img1;
 //	cv::namedWindow("Epilines", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
 //	cv::resize(out_imgLR, out_imgLR, size);
@@ -553,3 +466,11 @@ int main()
 //  cv::namedWindow("Homography test", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
 //  cv::resize(outputimage3, outputimage3, size);
 //  cv::imshow("Homography test", outputimage3);
+//	cv::Mat rectified1(l_img1.size(), l_img1.type());
+//	cv::warpPerspective(l_img1, rectified1, H1, l_img1.size());
+//	cv::imwrite("rectified1.png", rectified1);
+//
+//	cv::Mat rectified2(r_img1.size(), r_img1.type());
+//	cv::warpPerspective(r_img1, rectified2, H2, r_img1.size());
+//	cv::imwrite("rectified2.png", rectified2);
+//

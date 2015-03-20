@@ -62,7 +62,28 @@ double calibratePiCamera()
 	intrinsic.ptr <float>(0)[0] = 1; // focal length along X for Pi camera
 	intrinsic.ptr <float>(1)[1] = 1; // focal length along Y for Pi camera
 
+	// Essential Matrix ==> E = K`^T * F * K where K == intrinsic camera matrix
+
 	// Release camera image, return lens distortion
 	capture.release();
-	return cv::calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
-}
+	cv::calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
+//
+//	undistorted.x = (x* focalX + principalX);
+//	undistorted.y = (y* focalY + principalY);
+//	fX 0 pX
+//	0 fY pY
+//	0 0 1
+//	The code in "Opencv-ref-man-2.3.1.pdf" is:
+//// (u,v) is the input point, (u, v) is the output point
+//// camera_matrix=[fx 0 cx; 0 fy cy; 0 0 1]
+//// P=[fx 0 cx tx; 0 fy cy ty; 0 0 1 tz]
+//	x" = (u - cx)/fx
+//	y" = (v - cy)/fy
+//			(x,y) = undistort(x",y",dist_coeffs)
+//	[X,Y,W]T = R*[x y 1]T
+//			x = X/W, y = Y/W
+//	    u = x*fx + cx
+//	    v = y*fy + cy,
+
+	return 0;
+	}

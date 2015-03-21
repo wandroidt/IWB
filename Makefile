@@ -1,38 +1,50 @@
 #  Makefile for IWB Project;  Senior Design, Matt Piekenbrock
 
-CFLAGS = -g -Wall -pedantic -std=c++11 -I/usr/local/include -L/usr/local/lib
-CC = g++
-
-OPENCV_LIBS_pc = `pkg-config --libs opencv`
-OPENCV_LIBS_man = -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
-.SUFFIXES: .cpp .o .C
-
-.C.o:
-	$(CC) $(CFLAGS) -c $<
-
-.cpp.o:
-	$(CC) $(CFLAGS) -c $<
-
-
-FILES= main.cpp
-
+PROJECT = IWB
+FILES= main.cpp calibratePiCamera.h README.md LICENSE
 OBJFILES = main.o
+EXE = track
+CC = g++
+CFLAGS = -g -Wall -pedantic -std=c++11 -stdlib=libstdc++
 
-PROJECT = track
+OPENCV_LIBS_pkg = `pkg-config --libs opencv`
+OPENCV_LIBS = \
+-lopencv_core \
+-lopencv_highgui \
+-lopencv_features2d \
+-lopencv_imgproc \
+-lopencv_ml \
+-lopencv_video \
+-lopencv_calib3d \
+-lopencv_objdetect \
+-lopencv_contrib \
+-lopencv_legacy \
+-lopencv_flann \
+-lopencv_nonfree
+
+%.o : %.C
+	$(CC) -c $< $(CFLAGS)
+
+%.o : %.cpp
+	$(CC) -c $< $(CFLAGS)
 
 $(PROJECT): $(OBJFILES)
-	g++ -o $(PROJECT) $(CFLAGS) $(OBJFILES) $(OPENCV_LIBS_man)
-
-$(OBJFILES):  Makefile
+	g++ $(OBJFILES) -o $(EXE) $(CFLAGS) $(OPENCV_LIBS)
 
 indent:
-	indent -i2 -pmt *.C *.h
+	indent -i2 -pmt *.C *.cpp *.h
 
-tar archive: clean
-	(cd ..; tar cvvfj ./$(PROJECT).tbz $(PROJECT); ls -l $(PROJECT).tbz)
+tar: clean
+	tar --version; tar cfvz ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.gz $(FILES); ls -l ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.gz;
+gzip: clean
+	tar --version; GZIP=-9 tar cfvz ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.gz $(FILES); ls -l ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.gz;
+bzip2: clean
+	tar --version; BZIP=-9 tar cfvy ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.bz2 $(FILES); ls -l ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.bz2;
+xz: clean
+	tar --version; XZ_OPT=-9 tar cfvJ ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.xz $(FILES); ls -l ./archives/$(PROJECT)_$(shell date +"%m-%d-%y").tar.xz;
 
 clean:
-	rm -fr *.o *~ *.out $(PROJECT)
+	rm -fr *.o *~ *.out $(EXE)
 
 
 # -eof-

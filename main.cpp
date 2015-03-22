@@ -10,6 +10,8 @@ using namespace std;
 using namespace cv;
 
 typedef unsigned int uint;
+
+
 KeyPoint filter_keypoints(vector <KeyPoint> &my_key_list)
 {
 	double min_size = 0;
@@ -57,12 +59,16 @@ Ptr <FeatureDetector> getBlobDetector()
 	return blob_detector;
 }
 
-KeyPoint detectBlob(Mat &image, Ptr <FeatureDetector> blob_detector)
+bool detectBlob(Mat &image, KeyPoint& keypoint,Ptr <FeatureDetector> blob_detector)
 {
 	vector <KeyPoint> blob_keypoints = vector <KeyPoint>();
 	blob_detector->detect(image, blob_keypoints);
 	drawKeypoints(image, blob_keypoints, image, CV_RGB(0, 255, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-	return filter_keypoints(blob_keypoints);
+	if (blob_keypoints.empty())
+		return false;
+	else
+		keypoint = filter_keypoints(blob_keypoints);
+	return true;
 }
 
 vector <KeyPoint>* detectBlobs(Mat* images, uint nImages, int output)
@@ -70,10 +76,12 @@ vector <KeyPoint>* detectBlobs(Mat* images, uint nImages, int output)
 	// Initialize variables
 	Ptr <FeatureDetector> blob_detector = getBlobDetector();
 	vector <KeyPoint>* blob_keypoints = new vector <KeyPoint>();
+	KeyPoint blob_keypoint = KeyPoint();
 
 	// Detect all blobs that meet blob detector parameter criteria
 	for (uint i = 0; i < nImages; ++i)
-		blob_keypoints->push_back(detectBlob(images[i], blob_detector));
+		if (detectBlob(images[i], blob_keypoint, blob_detector))
+			blob_keypoints->push_back(blob_keypoint);
 
 	// If output flag is specified, display detected blobs for each image
 	if (output)
@@ -107,6 +115,40 @@ bool my_intersection(Point2d o1, Point2d p1, Point2d o2, Point2d p2, Point2d &r)
 	r = o1 + d1 * t1;
 	return true;
 }
+
+vector <cv::Point2f> getBoardDimensions()
+{
+	vector <cv::Point2f> corners;
+	cv::Size size(800, 600);
+	cv::Mat image, gray_image;
+	cv::KeyPoint keypoint = KeyPoint();
+	bool found = 0;
+	Ptr<FeatureDetector> blob_detector = getBlobDetector();
+
+	// Stream input frames (image) from video
+	cv::VideoCapture capture = cv::VideoCapture(0);
+	capture >> image;
+
+	// Visual feedback
+	cvtColor(image, gray_image, CV_BGR2GRAY);
+	cv::resize(gray_image, gray_image, size);
+	imshow("Gray", gray_image);
+
+	uint i = 0;
+	while (i < 4)
+	{
+		int key = cv::waitKey(1);
+		// Space-bar stores corner results
+		if (detectBlob(gray_image, keypoint, blob_detector) && key == ' ')
+		{
+			cout << "corner " << i++ << " stored" << endl;
+			corners.push_back(keypoint.pt);
+		}
+		capture.release();
+	}
+	return corners;
+}
+
 
 Mat rotateImage(const Mat &source, double angle)
 {

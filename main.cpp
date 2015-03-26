@@ -5,12 +5,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
+#include "calibratePiCamera.h"
 
 using namespace std;
 using namespace cv;
 
 typedef unsigned int uint;
-
 
 KeyPoint filter_keypoints(vector <KeyPoint> &my_key_list)
 {
@@ -175,24 +175,39 @@ void getImages(char* src_folder, char* image_pattern, Mat* images, uint nImages)
 int main()
 {
 	Size size(800, 600);
-	//calibratePiCamera();
-	//vector <Mat*> camera_vector_angle_R, camera_vector_angle_L;
+	const uint nImages = 8;
+	cv::Mat r_imgs[nImages], l_imgs[nImages], nr_imgs[nImages], nl_imgs[nImages];
 
-	Mat r_imgs[8], l_imgs[8];
-
+	// Load input images
 	getImages((char*) "images", (char*) "r_img", r_imgs, 8);
 	getImages((char*) "images", (char*) "l_img", l_imgs, 8);
 
-	cout << "got here" << endl;
-	cout.flush();
+	cout << "Got here" << endl;
 
-	vector <KeyPoint>* detected_objs_L = detectBlobs(l_imgs, 8, 0);
-	vector <KeyPoint>* detected_objs_R = detectBlobs(r_imgs, 8, 0);
+	// Begin Camera calibration **EXPERIMENTAL**
+	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
+	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
+	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
 
-	cout << "\n=================== Blob Results (L) ===================" << endl;
+	for (uint i =0; i < nImages; ++i)
+	{
+		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
+		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
+	}
+
+	// Detect corresponding IR pen blobs ( use 0 for no output, 1 for output)
+	vector <KeyPoint>* detected_objs_L = detectBlobs(l_imgs, nImages, 0);
+	vector <KeyPoint>* detected_objs_R = detectBlobs(r_imgs, nImages, 0);
+	if (detected_objs_L->size() != detected_objs_R->size())
+		exit(1);
+
+//	for (uint i = 0; i < detected_objs_L->size(); ++i)
+//		undistortPoints(detected_objs_L, detected_objs_L, intrinsic, distCoeffs, rvecs, tvecs);
+
+	cout << "\n=================== Normalized Blob Results (L) ===================" << endl;
 	for (auto &blob_keypoint: *detected_objs_L)
 	{cout << blob_keypoint.pt;}
-	cout << "\n=================== Blob Results (R) ===================" << endl;
+	cout << "\n=================== Normalized Blob Results (R) ===================" << endl;
 	for (auto &blob_keypoint: *detected_objs_R)
 	{cout << blob_keypoint.pt;}
 
@@ -202,7 +217,7 @@ int main()
 	KeyPoint::convert(*detected_objs_R, pointsR);
 
 	// left points == 'First' image, right points == 'Second' image
-	Mat fundamental_matrix = findFundamentalMat(pointsL, pointsR, CV_FM_8POINT);
+	Mat fundamental_matrix = findFundamentalMat(pointsL, pointsR, CV_FM_RANSAC_ONLY);
 	Mat out_imgL, out_imgR;
 	vector <Vec3f> epilines_as_viewed_from_right_cam, epilines_as_viewed_from_left_cam;
 

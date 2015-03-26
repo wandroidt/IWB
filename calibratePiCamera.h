@@ -10,7 +10,7 @@
 
 using namespace std;
 
-double calibratePiCamera()
+double calibratePiCamera(cv::Mat& intrinsic, cv::Mat& distCoeffs, vector <cv::Mat>& rvecs, vector <cv::Mat>& tvecs)
 {
 	// Declare variables (tweak numBoards to # of images to take)
 	int numBoards = 7, numCornersHor = 8, numCornersVer = 6, successes = 0;;
@@ -20,18 +20,30 @@ double calibratePiCamera()
 	vector <vector <cv::Point3f>> object_points, image_points;
 	vector <cv::Point3f> corners;
 
+	cout << "got here" << endl;
+	cout.flush();
+
 	// Get input frame (image) from video
 	cv::VideoCapture capture = cv::VideoCapture(0);
-	capture >> image;
 
-	// List of vertices
-	vector <cv::Point3f> obj;
-	for (int j = 0; j < nTotalSquares; j++)
-	{obj.push_back(cv::Point3f(j / numCornersHor, j % numCornersHor, 0.0f));}
+	if ( !capture.isOpened() )  // if not success, exit program
+		cout << "Cannot open video stream" << endl;
+	else if (double fps = capture.get(CV_CAP_PROP_FPS) >  0)
+		cout << "Capturing at " << fps << " fps" << endl;
+
+
 
 	while (successes < numBoards)
 	{
+		if (capture.read(image))
+			cout << "Frame captured" << endl;
 		cvtColor(image, gray_image, CV_BGR2GRAY);
+
+		// List of vertices of chessboard corners
+		vector <cv::Point3f> obj;
+		for (int j = 0; j < nTotalSquares; j++)
+			obj.push_back(cv::Point3f(j / numCornersHor, j % numCornersHor, 0.0f));
+
 		bool found = findChessboardCorners(image, board_sz, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
 
 		// Corners contains pixel coord's of corners that matched the chessboard pattern
@@ -55,35 +67,13 @@ double calibratePiCamera()
 		}
 		else if (key == 27)
 			return 0;
+		capture.release();
 	}
-	// Prepare variables for camera calibration
-	cv::Mat intrinsic = cv::Mat(3, 3, CV_32FC1), distCoeffs;
-	vector <cv::Mat> rvecs, tvecs; // translation and rotation vectors
-	intrinsic.ptr <float>(0)[0] = 1; // focal length along X for Pi camera
-	intrinsic.ptr <float>(1)[1] = 1; // focal length along Y for Pi camera
 
-	// Essential Matrix ==> E = K`^T * F * K where K == intrinsic camera matrix
 
-	// Release camera image, return lens distortion
-	capture.release();
 	cv::calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
-//
-//	undistorted.x = (x* focalX + principalX);
-//	undistorted.y = (y* focalY + principalY);
-//	fX 0 pX
-//	0 fY pY
-//	0 0 1
-//	The code in "Opencv-ref-man-2.3.1.pdf" is:
-//// (u,v) is the input point, (u, v) is the output point
-//// camera_matrix=[fx 0 cx; 0 fy cy; 0 0 1]
-//// P=[fx 0 cx tx; 0 fy cy ty; 0 0 1 tz]
-//	x" = (u - cx)/fx
-//	y" = (v - cy)/fy
-//			(x,y) = undistort(x",y",dist_coeffs)
-//	[X,Y,W]T = R*[x y 1]T
-//			x = X/W, y = Y/W
-//	    u = x*fx + cx
-//	    v = y*fy + cy,
-
 	return 0;
 	}
+//	May not need these
+//	intrinsic.ptr <float>(0)[0] = 3.6; // focal length along X for Pi camera
+//	intrinsic.ptr <float>(1)[1] = 3.6; // focal length along Y for Pi camera

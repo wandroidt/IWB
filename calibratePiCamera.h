@@ -25,7 +25,7 @@ double calibratePiCamera(cv::Mat &intrinsic, cv::Mat &distCoeffs, vector <cv::Ma
 
 	// Get input frame (image) from video
 
-//	cvtColor(image, gray_image, CV_BGR2GRAY);
+	cvtColor(image, gray_image, CV_BGR2GRAY);
 
 //	if (!capture.isOpened())  // if not success, exit program
 //		cout << "Cannot open video stream" << endl;

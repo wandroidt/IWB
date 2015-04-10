@@ -159,7 +159,7 @@ Mat rotateImage(const Mat &source, double angle)
 	return dst;
 }
 
-void getImages(char* src_folder, char* image_pattern, Mat* images, uint nImages)
+void getImages(char* src_folder, char* image_pattern, Mat* images, uint nImages, bool grayscale)
 {
 	char img_path[1024];
 	for (uint i = 0; i < nImages; ++i)
@@ -168,7 +168,8 @@ void getImages(char* src_folder, char* image_pattern, Mat* images, uint nImages)
 		cout << img_path << endl;
 		images[i] = imread(img_path, 1);
 		threshold(images[i], images[i], 60, 255, 3);
-		cvtColor(images[i], images[i], CV_RGB2GRAY);
+		if (grayscale)
+			cvtColor(images[i], images[i], CV_RGB2GRAY);
 	}
 }
 /* Left and Right determined from a top-down view */
@@ -179,25 +180,31 @@ int main()
 	cv::Mat r_imgs[nImages], l_imgs[nImages], nr_imgs[nImages], nl_imgs[nImages];
 
 	// Load input images
-	getImages((char*) "images", (char*) "r_img", r_imgs, 8);
-	getImages((char*) "images", (char*) "l_img", l_imgs, 8);
+	getImages((char*) "images", (char*) "r_img", r_imgs, 8, false);
+	getImages((char*) "images", (char*) "l_img", l_imgs, 8, false);
+	getImages((char*) "images", (char*) "r_img", nr_imgs, 8, true);
+	getImages((char*) "images", (char*) "l_img", nl_imgs, 8, true);
 
-	cout << "Got here" << endl;
+	cout << "Got here " << endl;
 
-	// Begin Camera calibration **EXPERIMENTAL**
-	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
-	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
-	//calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
-	testingCalibration();
-	for (uint i =0; i < nImages; ++i)
-	{
-		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
-		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
-	}
+	// BEGIN Camera calibration **EXPERIMENTAL**
+//	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
+//	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
+//	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
+//	testingCalibration();
+//	for (uint i =0; i < nImages; ++i)
+//	{
+//		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
+//		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
+//	}
+	// END Camera calibration **EXPERIMENTAL**
 
 	// Detect corresponding IR pen blobs ( use 0 for no output, 1 for output)
 	vector <KeyPoint>* detected_objs_L = detectBlobs(nl_imgs, nImages, 0);
 	vector <KeyPoint>* detected_objs_R = detectBlobs(nr_imgs, nImages, 0);
+
+	cout << "Got here 3" << endl;
+
 	if (detected_objs_L->size() != detected_objs_R->size())
 		exit(1);
 

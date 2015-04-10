@@ -29,7 +29,7 @@ OPENCV_LIBS = \
 	$(CC) -c $< $(CFLAGS)
 
 $(PROJECT): $(OBJFILES)
-	g++ $(OBJFILES) -o $(EXE) $(CFLAGS) $(OPENCV_LIBS)
+	$(CC) $(OBJFILES) -o $(EXE) $(CFLAGS) $(OPENCV_LIBS)
 
 indent:
 	indent -i2 -pmt *.C *.cpp *.h

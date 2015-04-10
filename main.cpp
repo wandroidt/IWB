@@ -187,8 +187,8 @@ int main()
 	// Begin Camera calibration **EXPERIMENTAL**
 	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
 	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
-	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
-
+	//calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
+	testingCalibration();
 	for (uint i =0; i < nImages; ++i)
 	{
 		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
@@ -196,8 +196,8 @@ int main()
 	}
 
 	// Detect corresponding IR pen blobs ( use 0 for no output, 1 for output)
-	vector <KeyPoint>* detected_objs_L = detectBlobs(l_imgs, nImages, 0);
-	vector <KeyPoint>* detected_objs_R = detectBlobs(r_imgs, nImages, 0);
+	vector <KeyPoint>* detected_objs_L = detectBlobs(nl_imgs, nImages, 0);
+	vector <KeyPoint>* detected_objs_R = detectBlobs(nr_imgs, nImages, 0);
 	if (detected_objs_L->size() != detected_objs_R->size())
 		exit(1);
 
@@ -217,7 +217,7 @@ int main()
 	KeyPoint::convert(*detected_objs_R, pointsR);
 
 	// left points == 'First' image, right points == 'Second' image
-	Mat fundamental_matrix = findFundamentalMat(pointsL, pointsR, CV_FM_RANSAC_ONLY);
+	Mat fundamental_matrix = findFundamentalMat(pointsL, pointsR, CV_FM_8POINT);
 	Mat out_imgL, out_imgR;
 	vector <Vec3f> epilines_as_viewed_from_right_cam, epilines_as_viewed_from_left_cam;
 
@@ -261,6 +261,13 @@ int main()
 		abcR++;
 	}
 
+	Point2d intersection(0.0, 0.0);
+	my_intersection(left_epilines.at(0), left_epilines.at(1), right_epilines.at(0), left_epilines.at(1), intersection);
+
+	return 0;
+}
+
+
 //	line(out_imgR, Point2d(0,y_interceptR), Point2d(x_intercept, 0), CV_RGB(0, 255, 0), 2,
 //	         CV_AA, 0);
 //	namedWindow("Epiline R", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
@@ -271,9 +278,6 @@ int main()
 //	imshow("Epiline L", out_imgL);
 //	waitKey(0);
 
-
-//	Point2d intersection(0.0, 0.0);
-//	my_intersection(left_epilines.at(0), left_epilines.at(1), right_epilines.at(0), left_epilines.at(1), intersection);
 //	circle(out_imgR, intersection, 5, CV_RGB(0, 255, 0), 3);
 //	namedWindow("Inter", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
 //	resize(out_imgR, out_imgR, size);
@@ -296,8 +300,7 @@ int main()
 //		imshow("Epilines", out_imgLR);
 //		waitKey(50000);
 //
-//		//my_intersection(pt1, pt2, pt3, pt4, intersection);
-//		//cout << intersection << endl;
+
 //	}
 
 //	Size image_size(r_img1.rows, r_img2.cols);
@@ -314,8 +317,7 @@ int main()
 //
 //  //threshold( image_output, image_output, 242, 255,0); // 0 = Binary threshold
 
-	return 0;
-}
+
 
 /* Unused code */
 // Compute Homography

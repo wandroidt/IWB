@@ -15,57 +15,56 @@ double calibratePiCamera(cv::Mat &intrinsic, cv::Mat &distCoeffs, vector <cv::Ma
 	// Declare variables (tweak numBoards to # of images to take)
 	int numBoards = 7, numCornersHor = 8, numCornersVer = 6, successes = 0;;
 	int nTotalSquares = numCornersHor * numCornersVer;
-	cv::Size board_sz = cv::Size(numCornersHor, numCornersVer), size(800, 600);
-	cv::Mat image, gray_image;
+	cv::Size board_sz = cv::Size(numCornersHor, numCornersVer), size(1920, 1080);
 	vector <vector <cv::Point3f>> object_points, image_points;
 	vector <cv::Point3f> corners;
 
-	cout << "got here" << endl;
+	cout << "got to calibration" << endl;
 	cout.flush();
 
-	// Get input frame (image) from video
-
-	cvtColor(image, gray_image, CV_BGR2GRAY);
-
-//	if (!capture.isOpened())  // if not success, exit program
-//		cout << "Cannot open video stream" << endl;
-//	else if (double fps = capture.get(CV_CAP_PROP_FPS) > 0)
-//		cout << "Capturing at " << fps << " fps" << endl;
 	cv::VideoCapture capture = cv::VideoCapture(0);
+	if (!capture.isOpened())
+		cout << "Failed to Open Pi Camera " << endl;
+
+
+	bool found = false;
+	cv::Mat frame, bw_frame;
 	while (successes < numBoards)
 	{
-		capture >> image;
-		// List of vertices of chessboard corners
-		vector <cv::Point3f> obj;
-		for (int j = 0; j < nTotalSquares; j++)
-			obj.push_back(cv::Point3f(j / numCornersHor, j % numCornersHor, 0.0f));
-
-		bool found = findChessboardCorners(image, board_sz, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
-
-		// Corners contains pixel coord's of corners that matched the chessboard pattern
-		if (found)
+		if (capture.read(frame))
 		{
+			// List of vertices of chessboard corners
+			vector <cv::Point3f> obj;
+			for (int j = 0; j < nTotalSquares; j++)
+				obj.push_back(cv::Point3f(j / numCornersHor, j % numCornersHor, 0.0f));
+			found = findChessboardCorners(frame, board_sz, corners, CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS);
+			// Corners contains pixel coord's of corners that matched the chessboard pattern
+			if (found)
+			{
 //			cornerSubPix(gray_image, corners, cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 30, 0.1));
-			cvtColor(image, gray_image, CV_BGR2GRAY);
-			drawChessboardCorners(gray_image, board_sz, corners, found);
+				//cv::cvtColor(frame, bw_frame, CV_BGR2GRAY);
+				//cout << "found" << endl;
+				//drawChessboardCorners(bw_frame, board_sz, corners, found);
+			}
+			imshow("Not Gray", frame);
+			int key = cv::waitKey(30);
+			if (key == ' ' && found != false)
+			{
+				image_points.push_back(corners);
+				object_points.push_back(obj);
+				cout << "calibration image " << successes++ << " stored" << endl;
+			} else if (key == 27)
+				return 0;
 		}
-
+		else
+			clog << "Frame not captured" << endl;
+		}
 		// Visual feedback
-		//cv::resize(image, image, size);
-		imshow("Not Gray", image);
+	capture.release();
 
 		// Space-bar stores results and keeps going for numBoards times
-		int key = cv::waitKey(0);
-		if (key == ' ' && found != 0)
-		{
-			image_points.push_back(corners);
-			object_points.push_back(obj);
-			cout << "calibration image " << successes++ << " stored" << endl;
-		} else if (key == 27)
-			return 0;
-	}
-	capture.release();
-	cv::calibrateCamera(object_points, image_points, image.size(), intrinsic, distCoeffs, rvecs, tvecs);
+
+	cv::calibrateCamera(object_points, image_points, size, intrinsic, distCoeffs, rvecs, tvecs);
 	return 0;
 }
 

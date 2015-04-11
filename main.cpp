@@ -59,15 +59,18 @@ Ptr <FeatureDetector> getBlobDetector()
 	return blob_detector;
 }
 
-bool detectBlob(Mat &image, KeyPoint& keypoint,Ptr <FeatureDetector> blob_detector)
+bool detectBlob(Mat &image, KeyPoint &keypoint, Ptr <FeatureDetector> blob_detector)
 {
 	vector <KeyPoint> blob_keypoints = vector <KeyPoint>();
 	blob_detector->detect(image, blob_keypoints);
-	drawKeypoints(image, blob_keypoints, image, CV_RGB(0, 255, 0), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	if (blob_keypoints.empty())
 		return false;
 	else
+	{
 		keypoint = filter_keypoints(blob_keypoints);
+	}
+
+
 	return true;
 }
 
@@ -123,32 +126,34 @@ vector <cv::Point2f> getBoardDimensions()
 	cv::Mat image, gray_image;
 	cv::KeyPoint keypoint = KeyPoint();
 	bool found = 0;
-	Ptr<FeatureDetector> blob_detector = getBlobDetector();
+	Ptr <FeatureDetector> blob_detector = getBlobDetector();
 
 	// Stream input frames (image) from video
 	cv::VideoCapture capture = cv::VideoCapture(0);
 	capture >> image;
 
 	// Visual feedback
+	uint captured_corners = 0;
+	int key = cv::waitKey(1);
 	cvtColor(image, gray_image, CV_BGR2GRAY);
 	cv::resize(gray_image, gray_image, size);
-	imshow("Gray", gray_image);
-
-	uint i = 0;
-	while (i < 4)
+	namedWindow("Blob detector", CV_GUI_NORMAL);
+	circle(image, keypoint.pt, 5, CV_RGB(0, 255, 0), 3);
+	imshow("Blob detector", image);
+	while (captured_corners < 4)
 	{
-		int key = cv::waitKey(1);
-		// Space-bar stores corner results
-		if (detectBlob(gray_image, keypoint, blob_detector) && key == ' ')
+		if (detectBlob(gray_image, keypoint, blob_detector))
 		{
-			cout << "corner " << i++ << " stored" << endl;
-			corners.push_back(keypoint.pt);
+				if (key == ' ')
+					corners.push_back(keypoint.pt);
+				else
+				cout << "No blob detected" << endl;
 		}
+		// Space-bar stores corner results
 		capture.release();
 	}
 	return corners;
 }
-
 
 Mat rotateImage(const Mat &source, double angle)
 {
@@ -187,21 +192,34 @@ int main()
 
 	cout << "Got here " << endl;
 
-	// BEGIN Camera calibration **EXPERIMENTAL**
-//	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
-//	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
-//	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
-//	testingCalibration();
-//	for (uint i =0; i < nImages; ++i)
-//	{
-//		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
-//		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
-//	}
+	 //BEGIN Camera calibration **EXPERIMENTAL**
+	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
+	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
+	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
+	for (uint i =0; i < nImages; ++i)
+	{
+		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
+		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
+	}
 	// END Camera calibration **EXPERIMENTAL**
 
 	// Detect corresponding IR pen blobs ( use 0 for no output, 1 for output)
 	vector <KeyPoint>* detected_objs_L = detectBlobs(nl_imgs, nImages, 0);
 	vector <KeyPoint>* detected_objs_R = detectBlobs(nr_imgs, nImages, 0);
+
+	vector <Point2f> pointsL, pointsR;
+	KeyPoint::convert(*detected_objs_L, pointsL);
+	KeyPoint::convert(*detected_objs_R, pointsR);
+
+	cv::Mat r1 = cv::Mat::zeros(3, 3, CV_32F);
+	cv::Mat r2 = cv::Mat::zeros(3, 3, CV_32F);
+	cv::Mat p1 = cv::Mat::zeros(3, 4, CV_32F);
+	cv::Mat p2 = cv::Mat::zeros(3, 4, CV_32F);
+	cv::Mat q= cv::Mat::zeros(4, 4, CV_32F);
+	cv::Mat homogeneous_coords = cv::Mat::zeros(4, nImages, CV_32F);
+	Size pi_res(1920, 1080);
+	stereoRectify(intrinsic, distCoeffs, intrinsic, distCoeffs, pi_res, rvecs, tvecs, r1, r2, p1, p2,  q, CALIB_ZERO_DISPARITY, -1, pi_res, 0, 0);
+	triangulatePoints(p1, p2,  pointsL, pointsR, homogeneous_coords);
 
 	cout << "Got here 3" << endl;
 
@@ -211,20 +229,28 @@ int main()
 //	for (uint i = 0; i < detected_objs_L->size(); ++i)
 //		undistortPoints(detected_objs_L, detected_objs_L, intrinsic, distCoeffs, rvecs, tvecs);
 
-	cout << "\n=================== Normalized Blob Results (L) ===================" << endl;
-	for (auto &blob_keypoint: *detected_objs_L)
-	{cout << blob_keypoint.pt;}
-	cout << "\n=================== Normalized Blob Results (R) ===================" << endl;
-	for (auto &blob_keypoint: *detected_objs_R)
-	{cout << blob_keypoint.pt;}
-
 	// Convert KeyPoints to points vector
-	vector <Point2f> pointsL, pointsR;
-	KeyPoint::convert(*detected_objs_L, pointsL);
-	KeyPoint::convert(*detected_objs_R, pointsR);
+
 
 	// left points == 'First' image, right points == 'Second' image
 	Mat fundamental_matrix = findFundamentalMat(pointsL, pointsR, CV_FM_8POINT);
+
+	vector <cv::Point2f> L_corners = getBoardDimensions();
+	vector <cv::Point2f> R_corners = getBoardDimensions();
+
+
+
+//	cv::Mat point = cv::Mat(3, 1);
+//	cv::Mat result = cv::Mat(3, 1);
+//	point.at(0) = pointsL.at(0).x;
+//	point.at(1) = pointsL.at(0).y;
+//	point.at(2) = 1;
+//	gemm(fundamental_matrix, point, 1, 0, 0, result);
+//
+//	cout << "x: " << result.at(0) <<  "y: " << result.at(1) <<  "z: " << result.at(2);
+
+
+
 	Mat out_imgL, out_imgR;
 	vector <Vec3f> epilines_as_viewed_from_right_cam, epilines_as_viewed_from_left_cam;
 
@@ -233,6 +259,7 @@ int main()
 
 	vector <Vec3f>::const_iterator abcR = epilines_as_viewed_from_right_cam.begin();
 	vector <Vec3f>::const_iterator abcL = epilines_as_viewed_from_left_cam.begin();
+
 
 	uint i = 0;
 	float y_intercept_L = 0, y_intercept_R = 0;
@@ -246,10 +273,6 @@ int main()
 		left_epilines.push_back(Point2d(0, y_intercept_L));
 		left_epilines.push_back(Point2d(out_imgL.cols, y_intercept_R));
 		line(out_imgL, Point2d(0, y_intercept_L), Point2d(out_imgL.cols, y_intercept_R), CV_RGB(0, 255, 0), 2, CV_AA, 0);
-		namedWindow("Epiline L", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-		resize(out_imgL, out_imgL, size);
-		imshow("Epiline L", out_imgL);
-		waitKey(0);
 		abcL++;
 	}
 	i = 0;
@@ -261,16 +284,21 @@ int main()
 		right_epilines.push_back(Point2d(0, y_intercept_L));
 		right_epilines.push_back(Point2d(out_imgR.cols, y_intercept_R));
 		line(out_imgR, Point2d(0, y_intercept_L), Point2d(out_imgR.cols, y_intercept_R), CV_RGB(0, 255, 0), 2, CV_AA, 0);
-		namedWindow("Epiline R", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
-		resize(out_imgR, out_imgR, size);
-		imshow("Epiline R", out_imgR);
-		waitKey(0);
 		abcR++;
 	}
 
-	Point2d intersection(0.0, 0.0);
-	my_intersection(left_epilines.at(0), left_epilines.at(1), right_epilines.at(0), left_epilines.at(1), intersection);
-
+//	Point3f intersection(0.0, 0.0, 0.0);
+//	for (uint i = 0; i < nImages; ++i)
+//		if (my_intersection(left_epilines.at(i), left_epilines.at(i + 1), right_epilines.at(i), right_epilines.at(i + 1), intersection))
+//		{
+//			cout << "Intersection found at: [" << intersection.x << ", " << intersection.y << "]\n";
+//		} else
+//			cout << "No intersection found" << endl;
+//
+//	namedWindow("Intersections", CV_WINDOW_AUTOSIZE | CV_WINDOW_FREERATIO);
+//	resize(out_imgR, out_imgR, size);
+//	imshow("Intersections", out_imgR);
+//	waitKey(0);
 	return 0;
 }
 
@@ -311,7 +339,7 @@ int main()
 //	}
 
 //	Size image_size(r_img1.rows, r_img2.cols);
-	//stereoRectifyUncalibrated(pointsR, pointsL,  fundamental_matrix,  image_size,  H1,  H2,  5);
+//stereoRectifyUncalibrated(pointsR, pointsL,  fundamental_matrix,  image_size,  H1,  H2,  5);
 
 
 

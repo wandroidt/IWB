@@ -8,18 +8,12 @@ CC = g++
 CFLAGS = -g -Wall -pedantic -std=c++11 -stdlib=libstdc++
 
 OPENCV_LIBS_pkg = `pkg-config --libs opencv`
-OPENCV_LIBS = \
+OPENCV_LIBS = -L/usr/local/lib \
 -lopencv_core \
 -lopencv_highgui \
--lopencv_features2d \
 -lopencv_imgproc \
--lopencv_ml \
--lopencv_video \
 -lopencv_calib3d \
--lopencv_objdetect \
--lopencv_contrib \
--lopencv_legacy \
--lopencv_flann \
+-lopencv_features2d \
 -lopencv_nonfree
 
 %.o : %.C

@@ -22,7 +22,6 @@ int main(int argc, char ** argv) {
     /* A specific host address can be specified by   */
     /* enet_address_set_host (& address, "x.x.x.x"); */
     address.host = ENET_HOST_ANY;
-    /* Bind the server to port 1234. */
     address.port = PORT;
     printf("Creating server on %s:%d\n", address.host, address.port);
     server = enet_host_create(& address /* the address to bind the server host to */,

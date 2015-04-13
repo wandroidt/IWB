@@ -1,9 +1,9 @@
 #  Makefile for IWB Project;  Senior Design, Matt Piekenbrock
 
 PROJECT = IWB
-FILES= main.cpp calibratePiCamera.h README.md LICENSE
-OBJFILES = main.o
-EXE = track
+FILES= main.cpp calibratePiCamera.h calibration.cpp README.md LICENSE
+OBJFILES = calibration.o
+EXE = calibrateCamera
 CC = g++
 CFLAGS = -g -Wall -pedantic -std=c++11 -stdlib=libstdc++
 

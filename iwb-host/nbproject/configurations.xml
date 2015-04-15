@@ -39,7 +39,7 @@
           <incDir>
             <pElem>include</pElem>
           </incDir>
-          <commandLine>-fpermissive</commandLine>
+          <commandLine>-fpermissive -std=c++11</commandLine>
         </ccTool>
         <linkerTool>
           <linkerLibItems>

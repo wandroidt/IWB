@@ -42,8 +42,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-fpermissive
-CXXFLAGS=-fpermissive
+CCFLAGS=-fpermissive -std=c++11
+CXXFLAGS=-fpermissive -std=c++11
 
 # Fortran Compiler Flags
 FFLAGS=

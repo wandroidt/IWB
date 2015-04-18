@@ -1,6 +1,5 @@
 #include <cstdlib>
 #include <chrono>
-#include <ctime>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +11,7 @@
 using namespace std;
 using namespace std::chrono;
 
-unsigned long coord[2] = {1280, 720};
+long data[2] = {-1, -1};
 
 int main(int argc, char ** argv) {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -42,6 +41,10 @@ int main(int argc, char ** argv) {
 
     ENetEvent event;
     while (1) {
+        // WIP: Clock for buffer.
+        auto now = high_resolution_clock::now();
+        auto nanos = duration_cast<nanoseconds>(now.time_since_epoch()).count();
+        // WIP: Code that utilizes clock.
         if (enet_host_service(server, & event, 100) > 0) {
             switch (event.type) {
                 case ENET_EVENT_TYPE_CONNECT:
@@ -68,13 +71,15 @@ int main(int argc, char ** argv) {
         }
         if (GetAsyncKeyState(VK_ESCAPE)) break;
         if (GetAsyncKeyState(VK_INSERT)) {
-            auto now = high_resolution_clock::now();
-            auto nanos = duration_cast<nanoseconds>(now.time_since_epoch()).count();
-            unsigned long data[3] = {(unsigned long) nanos, coord[0], coord[1]};
-            /* Create a reliable packet of size 7 containing "packet\0" */
+            // WIP: Grab the Mouse (For Testing Only).
+            POINT p;
+            if (GetCursorPos(&p)) {
+                data[0] = p.x;
+                data[1] = p.y;
+            }
             ENetPacket * packet = enet_packet_create(data,
                     sizeof (data) + 1,
-                    ENET_PACKET_FLAG_RELIABLE);
+                    0);
             /* Extend the packet so and append the string "foo", so it now */
             /* contains "packetfoo\0"                                      */
             //enet_packet_resize(packet, strlen("packetfoo") + 1);
@@ -82,6 +87,13 @@ int main(int argc, char ** argv) {
             /* Send the packet to the peer over channel id 0. */
             /* One could also broadcast the packet by         */
             /* enet_host_broadcast (host, 0, packet);         */
+            enet_host_broadcast(server, 0, packet);
+        } else {
+            data[0] = -1;
+            data[1] = -1;
+            ENetPacket * packet = enet_packet_create(data,
+                    sizeof (data) + 1,
+                    0);
             enet_host_broadcast(server, 0, packet);
         }
     }

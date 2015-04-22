@@ -192,18 +192,36 @@ int main()
 
 	cout << "Got here " << endl;
 
-	 //BEGIN Camera calibration **EXPERIMENTAL**
-	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1), &distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
+
+	cv::Mat& distCoeffs =  *new cv::Mat(5, 1, CV_32FC1);
 	vector <cv::Mat>& rvecs = *new vector <cv::Mat>(), &tvecs = *new vector <cv::Mat>();
-	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
-	for (uint i =0; i < nImages; ++i)
-	{
-		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
-		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
-	}
+
+	distCoeffs.at<float>(0,0) = 7.3428302466628209e-02f;
+	distCoeffs.at<float>(0,1) = -3.9465988248911643e-01f;
+	distCoeffs.at<float>(0,2) = 8.8354129133378905e-03f;
+	distCoeffs.at<float>(0,3) = -2.7675727440466453e-03f;
+	distCoeffs.at<float>(0,4) = 5.2368725337614452e-01f;
+
+	cout << "dist_coeffs: " << distCoeffs.at<float>(0,0) << " " << distCoeffs.at<float>(0,1) << endl;
+
+	float intrinsic_data[9] = {9.7863314406435995e+02f, 0.f, 6.4282012301324335e+02f, 0.f, 9.8488835688994175e+02f, 4.1131868786046425e+02f, 0.f, 0.f, 1.f};
+	cv::Mat& intrinsic = *new cv::Mat(3, 3, CV_32FC1, intrinsic_data);
+
+	cout << intrinsic.at<float>(0, 0) << endl;
+
+
+	//BEGIN Camera calibration **EXPERIMENTAL**
+//	calibratePiCamera(intrinsic, distCoeffs, rvecs, tvecs);
+//	for (uint i =0; i < nImages; ++i)
+//	{
+//		undistort(r_imgs[i], nr_imgs[i], intrinsic, distCoeffs);
+//		undistort(l_imgs[i], nl_imgs[i], intrinsic, distCoeffs);
+//	}
 	// END Camera calibration **EXPERIMENTAL**
 
 	// Detect corresponding IR pen blobs ( use 0 for no output, 1 for output)
+
+
 	vector <KeyPoint>* detected_objs_L = detectBlobs(nl_imgs, nImages, 0);
 	vector <KeyPoint>* detected_objs_R = detectBlobs(nr_imgs, nImages, 0);
 
